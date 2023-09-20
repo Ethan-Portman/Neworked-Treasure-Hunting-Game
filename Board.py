@@ -1,4 +1,6 @@
 import random
+import sys
+
 from Tile import Tile
 from Player import Player
 from Treasure import Treasure
@@ -7,7 +9,7 @@ from Treasure import Treasure
 class Board:
 
     # ---------------------------------------------- CONSTRUCTORS ------------------------------------------------------
-    def __init__(self, length, num_treasures, min_treasure, max_treasure):
+    def __init__(self, length: int, num_treasures: int, min_treasure: int, max_treasure: int):
         self.length = length
         self.num_treasures = num_treasures
         self.min_treasure = min_treasure
@@ -31,8 +33,8 @@ class Board:
         """
         for _ in range(self.num_treasures):
             treasure = self.generate_treasure()
-            x, y = self.get_square_free_of_treasure()
-            self.game_board[x][y].treasure = treasure
+            y, x = self.get_square_free_of_treasure()
+            self.game_board[y][x].treasure = treasure
 
     def get_square_free_of_treasure(self) -> tuple[int, int]:
         """
@@ -40,10 +42,10 @@ class Board:
         :return: The coordinates of a Tile with no treasure
         """
         while True:
-            x = random.randint(0, self.length - 1)
             y = random.randint(0, self.length - 1)
-            if self.game_board[x][y].treasure is None:
-                return x, y
+            x = random.randint(0, self.length - 1)
+            if self.game_board[y][x].treasure is None:
+                return y, x
 
     def generate_treasure(self) -> Treasure:
         """
@@ -55,103 +57,169 @@ class Board:
         return Treasure(value)
 
     # ------------------------------------------ LOGIC FOR ADDING PLAYER -----------------------------------------------
-    def add_player(self, name):
-        x_coordinate, y_coordinate = self.get_square_free_of_treasure_and_player()
+    def add_player(self, name: str) -> None:
+        """
+        Adds a player to a random position on the board free of treasure or player
+        :param name: Name of the player to be added to the board
+        """
+        y, x = self.get_square_free_of_treasure_and_player()
         new_player = Player(name)
-        self.game_board[x_coordinate][y_coordinate].player = new_player
+        self.game_board[y][x].player = new_player
 
     def get_square_free_of_treasure_and_player(self) -> tuple[int, int]:
+        """
+        Retrieves the coordinates of a Tile that is free of both treasure and player
+        :return: The coordinates of a tile with no treasure or player
+        """
         while True:
-            x = random.randint(0, self.length - 1)
-            y = random.randint(0, self.length - 1)
-            if self.game_board[x][y].treasure is None and self.game_board[x][y].player is None:
-                return x, y
+            y, x = self.get_square_free_of_treasure()
+            if self.game_board[y][x].player is None:
+                return y, x
 
     # -------------------------------------- LOGIC FOR MOVING  PLAYER --------------------------------------------------
-    def move_player(self, name, direction):
+    def move_player(self, name: str, direction: str) -> None:
+        """
+        Moves a player on the board to a new position. If there is treasure on the new position
+        the player picks it up
+        :param name: Name of the player to be moved
+        :param direction: The direction that the player will move
+        """
         # Find and retrieve the position of the player that will be moved
-        curr_row, curr_col = self.find_player(name)
+        old_y, old_x = self.find_player(name)
 
         # Get a valid direction for the player to be moved
-        direction = self.get_valid_movement_direction(name, curr_row, curr_col, direction)
+        direction = self.get_valid_movement_direction(name, old_y, old_x, direction)
 
         # Get the position of the new coordinate
-        new_row, new_col = self.get_new_coordinates(curr_row, curr_col, direction)
+        new_y, new_x = self.get_new_coordinates(old_y, old_x, direction)
 
         # Update the player to the new position on the board
-        self.update_player_position(name, curr_row, curr_col, new_row, new_col)
+        self.update_player_position(name, old_y, old_x, new_y, new_x)
 
         # Check and collect treasure on the new position
-        self.collect_treasure(name, new_row, new_col)
+        self.collect_treasure(name, new_y, new_x)
 
-    def find_player(self, name) -> tuple[int, int]:
-        row_num = 0
+    def find_player(self, name: str) -> tuple[int, int]:
+        """
+        Retrieves the coordinates of a player
+        :param name: The name of the player to be retrieved
+        :return: The coordinates of the player
+        """
+        y = 0
         for row in self.game_board:
-            col_num = 0
+            x = 0
             for square in row:
                 if square.player is not None and square.player.name is name:
-                    return row_num, col_num
-                col_num += 1
-            row_num += 1
+                    return y, x
+                x += 1
+            y += 1
 
-    def get_valid_movement_direction(self, name, curr_row, curr_col, direction) -> str:
+    def get_valid_movement_direction(self, name: str, y: int, x: int, direction: str) -> str:
+        """
+        Gets a valid input for the movement of a player.
+        :param name: The player to be moved
+        :param y: The current y coordinate of the player
+        :param x: The current x coordinate of the player
+        :param direction: The direction the player is trying to move
+        :return: A valid direction the player will move
+        """
         while True:
-            valid_direction = self.is_valid_movement(name, curr_row, curr_col, direction)
+            valid_direction = self.is_valid_movement(name, y, x, direction)
             if valid_direction:
                 return direction
             else:
-                print("player cannot move that way!")
+                print("Invalid Input.")
                 direction = input("Try again: ").upper()
 
-    def is_valid_movement(self, name, row, col, direction) -> bool:
+    def is_valid_movement(self, name: str, y: int, x: int, direction: str) -> bool:
+        """
+        Validates if the entered direction is a valid input
+        :param name: The player to be moved
+        :param y: The current y coordinate of the player
+        :param x: The current x coordinate of the player
+        :param direction: The direction the player will move
+        :return: If the direction is valid or not
+        """
         match direction:
-            case 'U' if row > 0:
+            case 'U' if y > 0:
                 return True
-            case 'D' if row < self.length - 1:
+            case 'D' if y < self.length - 1:
                 return True
-            case 'L' if col > 0:
+            case 'L' if x > 0:
                 return True
-            case 'R' if col < self.length - 1:
+            case 'R' if x < self.length - 1:
+                return True
+            case 'Q':
                 return True
             case _:
                 return False
 
-    def get_new_coordinates(self, curr_row, curr_col, direction) -> tuple[int, int]:
-        # Get the new coordinate after the move
+    def get_new_coordinates(self, y: int, x: int, direction: str) -> tuple[int, int]:
+        """
+        Gets the coordinates of the player after the movement or quits the program depending on
+        the direction
+        :param y: The current y coordinate before the move
+        :param x: The current x coordinate before the move
+        :param direction: The direction of movement
+        :return: The coordinates after the move
+        """
         match direction:
             case 'U':
-                curr_row -= 1
+                y -= 1
             case 'D':
-                curr_row += 1
+                y += 1
             case 'L':
-                curr_col -= 1
+                x -= 1
             case 'R':
-                curr_col += 1
-        return curr_row, curr_col
+                x += 1
+            case 'Q':
+                self.quit_application()
+        return y, x
 
-    def update_player_position(self, name, curr_row, curr_col, new_row, new_col):
-        # Copy the player to the new coordinate
-        self.game_board[new_row][new_col].player = self.game_board[curr_row][curr_col].player
+    def update_player_position(self, name: str, old_y: int, old_x: int, new_y: int, new_x: int) -> None:
+        """
+        Moves a player from one tile to a different tile
+        :param name: The name of the player to be moved
+        :param old_y: The old y coordinate of the player
+        :param old_x: The old x coordinate of the player
+        :param new_y: The new y coordinate of the player
+        :param new_x: The new x coordinate of the player
+        """
+        self.game_board[new_y][new_x].player = self.game_board[old_y][old_x].player
+        self.game_board[old_y][old_x].player = None
 
-        # Remove the player from the old coordinate
-        self.game_board[curr_row][curr_col].player = None
-
-    def collect_treasure(self, name, row, col):
-        player = self.game_board[row][col].player
-        treasure = self.game_board[row][col].treasure
+    def collect_treasure(self, name: str, y: int, x: int):
+        """
+        Searches tile for treasure. If there is a treasure it adds the value to the player and removes the
+        treasure from the game board
+        :param name: The name of the player that is searching/ collecting the treasure
+        :param y: The y coordinate that the player is searching
+        :param x: The x coordinate that the player is searching
+        """
+        player = self.game_board[y][x].player
+        treasure = self.game_board[y][x].treasure
         if treasure is not None:
             value = treasure.value
             player.add_points(value)
-            print(f"{name} has just collected {value}\nTheir new score is {player.get_score()}")
-
-            self.game_board[row][col].treasure = None
+            print(f"Player {name} has just collected {value} points\nTheir new score is {player.get_score()}")
+            self.game_board[y][x].treasure = None
             self.num_treasures -= 1
 
     # ---------------------------------------- LOGIC FOR ENDING GAME  --------------------------------------------------
 
+    def quit_application(self):
+        """
+        Exits the program early if a player has chosen 'quit' for their movement option
+        """
+        print("Goodbye")
+        sys.exit()
 
+    def display_results(self, name_1: str, name_2: str):
+        player_1_y, player_1_x = self.find_player(name_1)
+        player_2_y, player_2_x = self.find_player(name_2)
 
+        player_1_score = self.game_board[player_1_y][player_1_x].player.get_score()
+        player_2_score = self.game_board[player_2_y][player_2_x].player.get_score()
 
-
-
+        print('Player 1 Score: ' + player_1_score)
 

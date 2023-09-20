@@ -1,5 +1,6 @@
 
 class Treasure:
-    def __int__(self, value: int, description: str = '$'):
-        self.value = value
+    def __init__(self, value: int, description: str = '$'):
         self.description = description
+        self.value = value
+

@@ -4,3 +4,5 @@ class Treasure:
         self.description = description
         self.value = value
 
+    def get_value(self):
+        return self.value

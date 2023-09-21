@@ -12,5 +12,5 @@ def display(board: Board):
         for square in row:
             output_str += str(square) + ' '
         output_str += '\n'
-
+    output_str += '_____________________________________'
     print(output_str)

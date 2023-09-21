@@ -8,3 +8,6 @@ class Player:
 
     def get_score(self):
         return self.score
+
+    def get_name(self):
+        return self.name

@@ -147,25 +147,34 @@ class Board:
             match direction:
                 case 'U':
                     if curr_y > 0:
+                        if self.game_board[curr_y - 1][curr_x].player is not None:
+                            raise ValueError(f"{name} cannot go up. There is a player in the way.")
                         return True
                     else:
                         raise ValueError(f"{name} cannot go up. There is a wall in the way.")
                 case 'D':
                     if curr_y < self.length - 1:
+                        if self.game_board[curr_y + 1][curr_x].player is not None:
+                            raise ValueError(f"{name} cannot go down. There is a player in the way.")
                         return True
                     else:
                         raise ValueError(f"{name} cannot go down. There is a wall in the way.")
                 case 'L':
                     if curr_x > 0:
+                        if self.game_board[curr_y][curr_x - 1].player is not None:
+                            raise ValueError(f"{name} cannot go left. There is a player in the way.")
                         return True
                     else:
                         raise ValueError(f"{name} cannot go left. There is a wall in the way.")
                 case 'R':
                     if curr_x < self.length - 1:
+                        if self.game_board[curr_y][curr_x + 1].player is not None:
+                            raise ValueError(f"{name} cannot go right. There is a player in the way.")
                         return True
                     else:
                         raise ValueError(f"{name} cannot go right. There is a wall in the way.")
                 case 'Q':
+                    self.display_results('1', '2')
                     return True
                 case _:
                     raise ValueError("Invalid input")

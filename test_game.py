@@ -17,6 +17,7 @@ def test_treasure_constructor():
         treasure = Treasure(0)
     with pytest.raises(ValueError, match="Description of treasure must be at least one character."):
         treasure = Treasure(10, '')
+    assert 0 == 1
 
 
 def test_treasure_setters():

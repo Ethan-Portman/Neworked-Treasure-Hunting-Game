@@ -7,9 +7,15 @@ from Treasure import Treasure
 
 
 class Board:
-
-    # ---------------------------------------------- CONSTRUCTOR -------------------------------------------------------
     def __init__(self, length: int, num_treasures: int, min_treasure: int, max_treasure: int):
+        if length < 2 or length > 50:
+            raise ValueError("Length of board must be between 2 and 50")
+        if num_treasures < 0 or num_treasures > (length * length):
+            raise ValueError("Number of treasures must be between 0 and length x length")
+        if min_treasure < 1 or min_treasure > 100:
+            raise ValueError("Minimum Treasure must be between 1 and 100")
+        if max_treasure < min_treasure or max_treasure > 1000:
+            raise ValueError("Maximum Treasure must be between minimum Treasure and a 1000")
         self.length = length
         self.num_treasures = num_treasures
         self.min_treasure = min_treasure
@@ -33,8 +39,8 @@ class Board:
         """
         for _ in range(self.num_treasures):
             treasure = self.generate_treasure()
-            y, x = self.get_square_free_of_treasure()
-            self.game_board[y][x].treasure = treasure
+            y_pos, x_pos = self.get_square_free_of_treasure()
+            self.game_board[y_pos][x_pos].add_treasure(treasure)
 
     def generate_treasure(self) -> Treasure:
         """
@@ -51,10 +57,10 @@ class Board:
         :return: The coordinates of a Tile with no treasure
         """
         while True:
-            y = random.randint(0, self.length - 1)
-            x = random.randint(0, self.length - 1)
-            if self.game_board[y][x].treasure is None:
-                return y, x
+            y_pos = random.randint(0, self.length - 1)
+            x_pos = random.randint(0, self.length - 1)
+            if self.game_board[y_pos][x_pos].get_treasure() is None:
+                return y_pos, x_pos
 
     # --------------------------------------- ADD PLAYERS TO THE BOARD -------------------------------------------------
     def add_player(self, name: str) -> None:
@@ -62,9 +68,9 @@ class Board:
         Adds a player to a random position on the board free of treasure or player
         :param name: Name of the player to be added to the board
         """
-        y, x = self.get_square_free_of_treasure_and_player()
-        new_player = Player(name)
-        self.game_board[y][x].player = new_player
+        y_pos, x_pos = self.get_square_free_of_treasure_and_player()
+        new_player = Player(y_pos, x_pos, name)
+        self.game_board[y_pos][x_pos].add_player(new_player)
 
     def get_square_free_of_treasure_and_player(self) -> tuple[int, int]:
         """
@@ -72,9 +78,9 @@ class Board:
         :return: The coordinates of a tile with no treasure or player
         """
         while True:
-            y, x = self.get_square_free_of_treasure()
-            if self.game_board[y][x].player is None:
-                return y, x
+            y_pos, x_pos = self.get_square_free_of_treasure()
+            if self.game_board[y_pos][x_pos].get_player() is None:
+                return y_pos, x_pos
 
     # ------------------------------------- FIND A PLAYER ON THE BOARD -------------------------------------------------
     def find_player(self, name: str) -> Player:
@@ -83,23 +89,10 @@ class Board:
         :param name: The name of the player to be retrieved
         :return: The player
         """
-        y, x = self.find_player_coordinates(name)
-        return self.game_board[y][x].player
-
-    def find_player_coordinates(self, name: str) -> tuple[int, int]:
-        """
-        Retrieves the coordinates of a player on the board
-        :param name: The name of the player to be retrieved
-        :return: The coordinates of the player
-        """
-        y = 0
         for row in self.game_board:
-            x = 0
             for square in row:
                 if square.player is not None and square.player.name is name:
-                    return y, x
-                x += 1
-            y += 1
+                    return square.player
 
     # ------------------------------------ MOVE A PLAYER ON THE BOARD --------------------------------------------------
     def move_player(self, name: str, direction: str) -> None:
@@ -142,7 +135,9 @@ class Board:
         :param direction: The direction the player will move
         :return: If the direction is valid or not
         """
-        curr_y, curr_x = self.find_player_coordinates(name)
+        player = self.find_player(name)
+        curr_y, curr_x = player.get_coordinates()
+
         try:
             match direction:
                 case 'U':
@@ -189,7 +184,7 @@ class Board:
         :param direction: The direction of movement
         :return: The coordinates after the move
         """
-        y, x = self.find_player_coordinates(name)
+        y, x = self.find_player(name).get_coordinates()
         match direction:
             case 'U':
                 y -= 1
@@ -211,7 +206,8 @@ class Board:
         :param new_x: The new x coordinate of the player
         """
         player = self.find_player(name)
-        old_y, old_x = self.find_player_coordinates(name)
+        old_y, old_x = player.get_coordinates()
+        player.set_coordinates(new_y, new_x)
 
         self.game_board[new_y][new_x].player = player
         self.game_board[old_y][old_x].player = None

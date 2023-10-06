@@ -83,29 +83,21 @@ def test_tile_string():
 
 
 # ------------------------------------------ TESTS FOR PLAYER CLASS ----------------------------------------------------
-"""
-THIS IS FAILING
-
-"""
-def test_player_constructor():  # TO_DO - update for new paramaters
-    player = Player()
+def test_player_constructor():
+    player = Player(1, 1)
     assert player.get_name() == "unknown"
     assert player.get_score() == 0
-    assert player.get_coordinates() == (None, None)
-    player = Player("#")
+    assert player.get_coordinates() == (1, 1)
+    player = Player(1,1,"#")
     assert player.get_name() == "#"
-    assert player.get_score() == 0
-    assert player.get_coordinates() == (None, None)
-    player = Player("@", 10)
-    assert player.get_name() == "@"
+    player = Player(1,1,"@", 10)
     assert player.get_score() == 10
-    assert player.get_coordinates() == (None, None)
     with pytest.raises(ValueError, match="Player cannot have a negative score"):
-        player = Player("#", -1)
+        player = Player(1,1,"#", -1)
     with pytest.raises(ValueError, match="Player name must be at least one character"):
-        player = Player("")
+        player = Player(1,1,"")
     with pytest.raises(ValueError, match="Player name must be at least one character"):
-        player = Player("", 10)
+        player = Player(1,1,"", 10)
 
 
 def test_player_name():

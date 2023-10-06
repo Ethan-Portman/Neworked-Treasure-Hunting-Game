@@ -8,29 +8,31 @@ from Treasure import Treasure
 
 class Board:
     def __init__(self, length: int, num_treasures: int, min_treasure: int, max_treasure: int):
-        if length < 2 or length > 50:
-            raise ValueError("Length of board must be between 2 and 50")
-        if num_treasures < 0 or num_treasures > (length * length):
-            raise ValueError("Number of treasures must be between 0 and length x length")
-        if min_treasure < 1 or min_treasure > 100:
-            raise ValueError("Minimum Treasure must be between 1 and 100")
-        if max_treasure < min_treasure or max_treasure > 1000:
-            raise ValueError("Maximum Treasure must be between minimum Treasure and a 1000")
         self.length = length
         self.num_treasures = num_treasures
         self.min_treasure = min_treasure
         self.max_treasure = max_treasure
+        self.invalid_board_check()
         self.game_board = self.create_board()
         self.populate_board_with_treasure()
 
-    # ------------------------------ CREATE GAME-BOARD AND POPULATE WITH TREASURE --------------------------------------
+    def invalid_board_check(self):
+        if self.length < 2 or self.length > 50:
+            raise ValueError("Length of board must be between 2 and 50")
+        if self.num_treasures < 0 or self.num_treasures > (self.length * self.length):
+            raise ValueError("Number of treasures must be between 0 and length x length")
+        if self.min_treasure < 1 or self.min_treasure > 100:
+            raise ValueError("Minimum Treasure must be between 1 and 100")
+        if self.max_treasure < self.min_treasure or self.max_treasure > 1000:
+            raise ValueError("Maximum Treasure must be between minimum Treasure and a 1000")
+
+    # --------------------------------- CREATE GAME-BOARD AND SETTING UP GAME ------------------------------------------
     def create_board(self) -> list[list[Tile]]:
         """
         Creates a 2D List to be used as the game-board
         :return: A 2D List of Tiles representing the game-board
         """
-        board = [[Tile() for _ in range(self.length)] for _ in range(self.length)]
-        return board
+        return [[Tile() for _ in range(self.length)] for _ in range(self.length)]
 
     def populate_board_with_treasure(self) -> None:
         """
@@ -38,9 +40,8 @@ class Board:
         Treasure is between min_treasure and max_treasure (inclusive)
         """
         for _ in range(self.num_treasures):
-            treasure = self.generate_treasure()
             y_pos, x_pos = self.get_square_free_of_treasure()
-            self.game_board[y_pos][x_pos].add_treasure(treasure)
+            self.game_board[y_pos][x_pos].add_treasure(self.generate_treasure())
 
     def generate_treasure(self) -> Treasure:
         """
@@ -48,8 +49,7 @@ class Board:
         and max_treasure (inclusive)
         :return: The newly generated treasure
         """
-        value = random.randint(self.min_treasure, self.max_treasure)
-        return Treasure(value)
+        return Treasure(random.randint(self.min_treasure, self.max_treasure))
 
     def get_square_free_of_treasure(self) -> tuple[int, int]:
         """
@@ -57,20 +57,9 @@ class Board:
         :return: The coordinates of a Tile with no treasure
         """
         while True:
-            y_pos = random.randint(0, self.length - 1)
-            x_pos = random.randint(0, self.length - 1)
+            y_pos, x_pos = random.randint(0, self.length - 1), random.randint(0, self.length - 1)
             if self.game_board[y_pos][x_pos].get_treasure() is None:
                 return y_pos, x_pos
-
-    # --------------------------------------- ADD PLAYERS TO THE BOARD -------------------------------------------------
-    def add_player(self, name: str) -> None:
-        """
-        Adds a player to a random position on the board free of treasure or player
-        :param name: Name of the player to be added to the board
-        """
-        y_pos, x_pos = self.get_square_free_of_treasure_and_player()
-        new_player = Player(y_pos, x_pos, name)
-        self.game_board[y_pos][x_pos].add_player(new_player)
 
     def get_square_free_of_treasure_and_player(self) -> tuple[int, int]:
         """
@@ -82,19 +71,24 @@ class Board:
             if self.game_board[y_pos][x_pos].get_player() is None:
                 return y_pos, x_pos
 
-    # ------------------------------------- FIND A PLAYER ON THE BOARD -------------------------------------------------
+    def add_player(self, name: str) -> None:
+        """
+        Adds a player to a random position on the board free of treasure or player
+        :param name: Name of the player to be added to the board
+        """
+        y_pos, x_pos = self.get_square_free_of_treasure_and_player()
+        self.game_board[y_pos][x_pos].add_player(Player(y_pos, x_pos, name))
+
+    # -------------------------------------------- PLAYING THE GAME ----------------------------------------------------
     def find_player(self, name: str) -> Player:
         """
         Retrieves a player on the board
         :param name: The name of the player to be retrieved
         :return: The player
         """
-        for row in self.game_board:
-            for square in row:
-                if square.player is not None and square.player.name is name:
-                    return square.player
+        return next((square.player for row in self.game_board for square in row
+                     if square.player and square.player.name == name), None)
 
-    # ------------------------------------ MOVE A PLAYER ON THE BOARD --------------------------------------------------
     def move_player(self, name: str, direction: str) -> None:
         """
         Moves a player on the board to a new position. If there is treasure on the new position
@@ -122,11 +116,9 @@ class Board:
         :return: A valid direction the player will move
         """
         while True:
-            valid_direction = self.is_valid_direction(name, direction)
-            if valid_direction:
+            if self.is_valid_direction(name, direction):
                 return direction
-            else:
-                direction = input("Try again: ").upper()
+            direction = input("Try again: ").upper()
 
     def is_valid_direction(self, name: str, direction: str) -> bool:
         """
@@ -135,39 +127,18 @@ class Board:
         :param direction: The direction the player will move
         :return: If the direction is valid or not
         """
-        player = self.find_player(name)
-        curr_y, curr_x = player.get_coordinates()
+        curr_y, curr_x = self.find_player(name).get_coordinates()
 
         try:
             match direction:
-                case 'U':
-                    if curr_y > 0:
-                        if self.game_board[curr_y - 1][curr_x].player is not None:
-                            raise ValueError(f"{name} cannot go up. There is a player in the way.")
-                        return True
-                    else:
-                        raise ValueError(f"{name} cannot go up. There is a wall in the way.")
-                case 'D':
-                    if curr_y < self.length - 1:
-                        if self.game_board[curr_y + 1][curr_x].player is not None:
-                            raise ValueError(f"{name} cannot go down. There is a player in the way.")
-                        return True
-                    else:
-                        raise ValueError(f"{name} cannot go down. There is a wall in the way.")
-                case 'L':
-                    if curr_x > 0:
-                        if self.game_board[curr_y][curr_x - 1].player is not None:
-                            raise ValueError(f"{name} cannot go left. There is a player in the way.")
-                        return True
-                    else:
-                        raise ValueError(f"{name} cannot go left. There is a wall in the way.")
-                case 'R':
-                    if curr_x < self.length - 1:
-                        if self.game_board[curr_y][curr_x + 1].player is not None:
-                            raise ValueError(f"{name} cannot go right. There is a player in the way.")
-                        return True
-                    else:
-                        raise ValueError(f"{name} cannot go right. There is a wall in the way.")
+                case 'U' if curr_y > 0 and self.game_board[curr_y - 1][curr_x].get_player() is None:
+                    return True
+                case 'D' if curr_y < self.length - 1 and self.game_board[curr_y + 1][curr_x].player is None:
+                    return True
+                case 'L' if curr_x > 0 and self.game_board[curr_y][curr_x - 1].player is None:
+                    return True
+                case 'R' if curr_x < self.length - 1 and self.game_board[curr_y][curr_x + 1].player is None:
+                    return True
                 case 'Q':
                     self.display_results('1', '2')
                     return True
@@ -209,8 +180,8 @@ class Board:
         old_y, old_x = player.get_coordinates()
         player.set_coordinates(new_y, new_x)
 
-        self.game_board[new_y][new_x].player = player
-        self.game_board[old_y][old_x].player = None
+        self.game_board[new_y][new_x].add_player(player)
+        self.game_board[old_y][old_x].remove_player()
 
     def collect_treasure(self, name: str, y: int, x: int):
         """
@@ -220,13 +191,13 @@ class Board:
         :param y: The y coordinate that the player is searching
         :param x: The x coordinate that the player is searching
         """
-        player = self.find_player(name)
-        treasure = self.game_board[y][x].treasure
+        treasure = self.game_board[y][x].get_treasure()
+
         if treasure is not None:
-            value = treasure.get_value()
-            player.add_points(value)
-            print(f"Player {name} has just collected {value} points\nTheir new score is {player.get_score()}")
-            self.game_board[y][x].treasure = None
+            player = self.find_player(name)
+            player.add_points(treasure.get_value())
+            print(f"Player {name} has just collected {treasure.get_value()} points\nTheir new score is {player.get_score()}")
+            self.game_board[y][x].remove_treasure()
             self.num_treasures -= 1
 
     # --------------------------------------------- END THE GAME -------------------------------------------------------

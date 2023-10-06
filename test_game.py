@@ -17,7 +17,6 @@ def test_treasure_constructor():
         treasure = Treasure(0)
     with pytest.raises(ValueError, match="Description of treasure must be at least one character."):
         treasure = Treasure(10, '')
-    assert 0 == 1
 
 
 def test_treasure_setters():
@@ -226,7 +225,6 @@ def test_populate_board_with_treasure():
     assert treasure_in_board_3 == treasure_board_3
 
 
-
 # ---------- Tests for Adding player onto the Board ----------
 def test_add_player():
     player_1 = "1"
@@ -251,13 +249,69 @@ def test_find_player():
     player_1 = "1"
     player_2 = "2"
     for _ in range(10):
-        board = Board(20, 10, 1, 5);
+        board = Board(20, 10, 1, 5)
         board.add_player(player_1)
         board.add_player(player_2)
         player_1_player = board.find_player(player_1)
         player_2_player = board.find_player(player_2)
         assert player_1_player.get_name() == player_1
         assert player_2_player.get_name() == player_2
+
+
+def test_is_valid_direction():
+    board = Board(20, 10, 1, 5)
+    board.game_board[0][0].add_player(Player(0,0,'1'))
+    board.game_board[0][1].add_player(Player(0,1,'2'))
+    assert board.is_valid_direction('1', 'R') is None
+    assert board.is_valid_direction('1', 'D') is True
+    assert board.is_valid_direction('2', 'L') is None
+    assert board.is_valid_direction('2', 'U') is None
+    assert board.is_valid_direction('2', 'R') is True
+
+
+def test_get_new_coordinates():
+    board = Board(10, 1, 1, 5)
+    board.game_board[5][5].add_player(Player(5, 5, '1'))
+    assert board.get_new_coordinates('1', 'U') == (4,5)
+    assert board.get_new_coordinates('1', 'D') == (6, 5)
+    assert board.get_new_coordinates('1', 'L') == (5, 4)
+    assert board.get_new_coordinates('1', 'R') == (5, 6)
+
+
+def test_update_player_position():
+    board = Board(10, 1, 1, 5)
+    player = Player(5, 5, '1')
+    board.game_board[5][5].player = player
+    board.move_player('1', 'U')
+    assert player.get_coordinates() == (4,5)
+    board.move_player('1', 'D')
+    assert player.get_coordinates() == (5, 5)
+    board.move_player('1', 'L')
+    assert player.get_coordinates() == (5, 4)
+    board.move_player('1', 'R')
+    assert player.get_coordinates() == (5, 5)
+
+
+def test_collect_treasure():
+    board = Board(10, 1, 1, 3)
+    player = Player(0, 0, '1')
+    board.game_board[0][0].player = player
+    board.game_board[0][1].add_treasure(Treasure(1))
+    board.move_player('1', 'R')
+    assert player.get_score() == 1
+    board.move_player('1', 'R')
+    assert board.game_board[0][1].get_treasure() is None
+    board.game_board[0][3].add_treasure(Treasure(2))
+    board.game_board[1][3].add_treasure(Treasure(3))
+    board.move_player('1', 'R')
+    board.move_player('1', 'D')
+    assert player.get_score() == 6
+
+
+
+
+
+
 
 
 

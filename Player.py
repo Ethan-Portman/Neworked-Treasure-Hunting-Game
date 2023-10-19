@@ -1,35 +1,45 @@
 class Player:
-    def __init__(self, y_coordinate, x_coordinate, name="unknown", score=0):
+    """
+    The player class represents a user in the game. A player can move around the game board collecting
+    treasure from the tiles.
+    """
+    def __init__(self, coordinates: tuple[int, int], name="unknown", score=0):
         if score < 0:
             raise ValueError("Player cannot have a negative score")
         if len(name) < 1:
             raise ValueError("Player name must be at least one character")
+        if coordinates[0] < 0 or coordinates[1] < 0:
+            raise ValueError("Player coordinates must be greater than 0.")
         self.name = name
         self.score = score
-        self.y_coordinate = y_coordinate
-        self.x_coordinate = x_coordinate
+        self.coordinates = coordinates
 
-    def get_name(self):
+    def get_name(self) -> str:
+        """Retrieves the name of the player."""
         return self.name
 
-    def set_name(self, name: str):
+    def set_name(self, name: str) -> None:
+        """Sets the name of the player to the specified string."""
         if len(name) < 1:
             raise ValueError("Player name must be at least one character")
         self.name = name
 
-    def get_score(self):
+    def get_score(self) -> int:
+        """Retrieves the score of the player."""
         return self.score
 
-    def add_points(self, points):
+    def add_points(self, points) -> None:
+        """Adds the specified amount of points to the players score."""
         if points < 0:
             raise ValueError("Value for points must be a positive number")
         self.score += points
 
-    def set_coordinates(self, y_coordinate: int, x_coordinate: int):
-        if y_coordinate < 0 or x_coordinate < 0:
-            raise ValueError("Coordinates must be 0 or higher")
-        self.y_coordinate = y_coordinate
-        self.x_coordinate = x_coordinate
+    def set_coordinates(self, coordinates: tuple[int, int]):
+        """Sets the players position to the specified coordinates."""
+        if coordinates[0] < 0 or coordinates[1] < 0:
+            raise ValueError("Player coordinates must be greater than 0")
+        self.coordinates = coordinates
 
     def get_coordinates(self) -> tuple[int, int]:
-        return self.y_coordinate, self.x_coordinate
+        """Retrieves the position of the player."""
+        return self.coordinates

@@ -19,7 +19,7 @@ def test_treasure_constructor():
         treasure = Treasure(10, '')
 
 
-def test_treasure_setters():
+def test_setting_treasure_value():
     treasure = Treasure(20)
     treasure.set_value(50)
     treasure.set_description('&')
@@ -33,26 +33,23 @@ def test_treasure_setters():
 
 # ------------------------------------------ TESTS FOR TILE CLASS ------------------------------------------------------
 def test_tile_constructor():
-    tile = Tile()
-    assert tile.get_description() == "."
+    tile = Tile(1, 2)
     assert tile.get_treasure() is None
     assert tile.get_player() is None
-    tile = Tile("%")
-    assert tile.get_description() == "%"
+    assert tile.description == "."
+    assert tile.get_coordinates() == (1, 2)
+    tile = Tile(0,0, "%")
+    assert tile.description == "%"
     with pytest.raises(ValueError, match="Tile description must have at least one character"):
-        tile = Tile('')
+        tile = Tile(0, 0, '')
+    with pytest.raises(ValueError, match="Coordinates must be above 0."):
+        tile = Tile(-1, 0, '$')
+    with pytest.raises(ValueError, match="Coordinates must be above 0."):
+        tile = Tile(0, -1, '$')
 
 
-def test_tile_description():
-    tile = Tile()
-    tile.set_description("#")
-    assert tile.get_description() == "#"
-    with pytest.raises(ValueError, match="Tile description must have at least one character"):
-        tile.set_description("")
-
-
-def test_tile_treasure():
-    tile = Tile()
+def test_add_remove_treasure_from_tile():
+    tile = Tile(0, 0)
     treasure = Treasure(10)
     tile.add_treasure(treasure)
     assert tile.get_treasure() == treasure
@@ -60,18 +57,18 @@ def test_tile_treasure():
     assert tile.get_treasure() is None
 
 
-def test_tile_player():
-    tile = Tile()
-    player = Player(1, 1, '1')
+def test_add_remove_player_from_tile():
+    tile = Tile(0,0)
+    player = Player((0, 0), '1')
     tile.add_player(player)
     assert tile.get_player() == player
     tile.remove_player()
     assert tile.get_player() is None
 
 
-def test_tile_string():
-    tile = Tile()
-    player = Player(1, 1, "1")
+def test_tile_to_string():
+    tile = Tile(0,0)
+    player = Player((0,0), "1")
     treasure = Treasure(10)
     tile.add_player(player)
     tile.add_treasure(treasure)
@@ -84,32 +81,26 @@ def test_tile_string():
 
 # ------------------------------------------ TESTS FOR PLAYER CLASS ----------------------------------------------------
 def test_player_constructor():
-    player = Player(1, 1)
+    player = Player((1, 1))
     assert player.get_name() == "unknown"
     assert player.get_score() == 0
     assert player.get_coordinates() == (1, 1)
-    player = Player(1,1,"#")
-    assert player.get_name() == "#"
-    player = Player(1,1,"@", 10)
+    player = Player((1, 1),"1")
+    assert player.get_name() == "1"
+    player = Player((1, 1),"1", 10)
     assert player.get_score() == 10
     with pytest.raises(ValueError, match="Player cannot have a negative score"):
-        player = Player(1,1,"#", -1)
+        player = Player((1,1),"1", -1)
     with pytest.raises(ValueError, match="Player name must be at least one character"):
-        player = Player(1,1,"")
-    with pytest.raises(ValueError, match="Player name must be at least one character"):
-        player = Player(1,1,"", 10)
-
-
-def test_player_name():
-    player = Player(1, 1)
-    player.set_name("#")
-    assert player.get_name() == "#"
-    with pytest.raises(ValueError, match="Player name must be at least one character"):
-        player.set_name("")
+        player = Player((1,1),"")
+    with pytest.raises(ValueError, match="Player coordinates must be greater than 0"):
+        player = Player((-1, 0))
+    with pytest.raises(ValueError, match="Player coordinates must be greater than 0"):
+        player = Player((0, -1))
 
 
 def test_player_scoring():
-    player = Player(1, 1)
+    player = Player((0,0))
     player.add_points(5)
     assert player.get_score() == 5
     with pytest.raises(ValueError, match="Value for points must be a positive number"):
@@ -117,17 +108,17 @@ def test_player_scoring():
 
 
 def test_player_coordinates():
-    player = Player(1, 2)
-    player.set_coordinates(2, 5)
+    player = Player((0,0))
+    player.set_coordinates((2, 5))
     assert player.get_coordinates() == (2, 5)
-    player.set_coordinates(3, 0)
+    player.set_coordinates((3, 0))
     assert player.get_coordinates() == (3, 0)
-    with pytest.raises(ValueError, match="Coordinates must be 0 or higher"):
-        player.set_coordinates(-1, 2)
-    with pytest.raises(ValueError, match="Coordinates must be 0 or higher"):
-        player.set_coordinates(5, -3)
-    with pytest.raises(ValueError, match="Coordinates must be 0 or higher"):
-        player.set_coordinates(-4, -4)
+    with pytest.raises(ValueError, match="Player coordinates must be greater than 0"):
+        player.set_coordinates((-1, 2))
+    with pytest.raises(ValueError, match="Player coordinates must be greater than 0"):
+        player.set_coordinates((5, -3))
+    with pytest.raises(ValueError, match="Player coordinates must be greater than 0"):
+        player.set_coordinates((-4, -4))
 
 
 # ------------------------------------------- TESTS FOR BOARD CLASS ----------------------------------------------------
@@ -137,22 +128,18 @@ def test_board_constructor():
     assert board.num_treasures == 20
     assert board.min_treasure == 1
     assert board.max_treasure == 10
-    # Test for invalid length of board
     with pytest.raises(ValueError, match="Length of board must be between 2 and 50"):
         board = Board(0, 0, 1, 2)
     with pytest.raises(ValueError, match="Length of board must be between 2 and 50"):
         board = Board(51, 0, 1, 2)
-    # Test for invalid number of treasures
     with pytest.raises(ValueError, match="Number of treasures must be between 0 and length x length"):
         board = Board(10, -1, 1, 2)
     with pytest.raises(ValueError, match="Number of treasures must be between 0 and length x length"):
         board = Board(5, 26, 1, 2)
-    # Test for invalid minimum Treasure
     with pytest.raises(ValueError, match="Minimum Treasure must be between 1 and 100"):
         board = Board(10, 1, 0, 2)
     with pytest.raises(ValueError, match="Minimum Treasure must be between 1 and 100"):
         board = Board(10, 1, 101, 110)
-    # Test for invalid maximum Treasure
     with pytest.raises(ValueError, match="Maximum Treasure must be between minimum Treasure and a 1000"):
         board = Board(10, 1, 10, 9)
     with pytest.raises(ValueError, match="Maximum Treasure must be between minimum Treasure and a 1000"):
@@ -167,33 +154,6 @@ def test_create_board():
     assert str(board.game_board[0][0]) == "."
 
 
-def test_generate_treasure():
-    min_treasure = 1
-    max_treasure = 5
-    board = Board(5, 5, min_treasure, max_treasure)
-    for _ in range(100):
-        treasure = board.generate_treasure()
-        value = treasure.get_value()
-        assert min_treasure <= value <= max_treasure
-
-
-def test_get_square_free_of_treasure():
-    board = Board(5, 20, 1, 5)
-    for _ in range(100):
-        y_pos, x_pos = board.get_square_free_of_treasure()
-        assert board.game_board[y_pos][x_pos].get_treasure() is None
-
-
-def test_get_square_free_of_treasure_and_player():
-    board = Board(5, 20, 1, 5)
-    board.add_player("1")
-    board.add_player("2")
-    for _ in range(100):
-        y_pos, x_pos = board.get_square_free_of_treasure_and_player()
-        assert board.game_board[y_pos][x_pos].get_treasure() is None
-        assert board.game_board[y_pos][x_pos].get_player() is None
-
-
 def test_populate_board_with_treasure():
     treasure_board_1 = 20
     treasure_board_2 = 16
@@ -202,35 +162,50 @@ def test_populate_board_with_treasure():
     board_2 = Board(4, treasure_board_2, 1, 5)
     board_3 = Board(5, treasure_board_3, 1, 5)
     treasure_in_board_1 = 0
+
     for row in board_1.game_board:
         for square in row:
             if square.get_treasure() is not None:
                 treasure_in_board_1 += 1
+                treasure_val = square.get_treasure().get_value()
+                assert 5 >= treasure_val >= 1
+    assert treasure_in_board_1 == treasure_board_1
+
     treasure_in_board_2 = 0
     for row in board_2.game_board:
         for square in row:
             if square.get_treasure() is not None:
                 treasure_in_board_2 += 1
+                treasure_val = square.get_treasure().get_value()
+                assert 5 >= treasure_val >= 1
+    assert treasure_in_board_2 == treasure_board_2
+
     treasure_in_board_3 = 0
     for row in board_3.game_board:
         for square in row:
             if square.get_treasure() is not None:
                 treasure_in_board_3 += 1
-    assert treasure_in_board_1 == treasure_board_1
-    assert treasure_in_board_2 == treasure_board_2
     assert treasure_in_board_3 == treasure_board_3
+
+
+def test_find_empty_tile():
+    board = Board(5, 20, 1, 5)
+    board.add_player_to_game_board("1")
+    board.add_player_to_game_board("2")
+    for _ in range(100):
+        tile = board.find_empty_tile()
+        assert tile.get_treasure() is None
+        assert tile.get_player() is None
 
 
 # ---------- Tests for Adding player onto the Board ----------
 def test_add_player():
-    player_1 = "1"
-    player_2 = "2"
-    for _ in range(10):
+    for i in range(10):
         player_1_added = False
         player_2_added = False
-        board = Board(2, 2, 1, 5)
-        board.add_player(player_1)
-        board.add_player(player_2)
+        board = Board(i + 2, 1, 1, 1)
+        board.add_player_to_game_board("1")
+        board.add_player_to_game_board("2")
         for row in board.game_board:
             for square in row:
                 if square.get_player() is not None and square.get_player().get_name() == "1":
@@ -239,69 +214,85 @@ def test_add_player():
                     player_2_added = True
         assert player_1_added is True
         assert player_2_added is True
+        assert any(player.get_name() == "1" for player in board.players)
+        assert any(player.get_name() == "2" for player in board.players)
 
 
-def test_find_player():
-    player_1 = "1"
-    player_2 = "2"
+def test_find_player_by_name():
     for _ in range(10):
-        board = Board(20, 10, 1, 5)
-        board.add_player(player_1)
-        board.add_player(player_2)
-        player_1_player = board.find_player(player_1)
-        player_2_player = board.find_player(player_2)
-        assert player_1_player.get_name() == player_1
-        assert player_2_player.get_name() == player_2
+        board = Board(50, 10, 1, 5)
+        board.add_player_to_game_board("1")
+        board.add_player_to_game_board("2")
+        player_1 = board.find_player_by_name("1")
+        player_2 = board.find_player_by_name("2")
+        assert player_1.get_name() == "1"
+        assert player_2.get_name() == "2"
 
 
-def test_is_valid_direction():
-    board = Board(20, 10, 1, 5)
-    board.game_board[0][0].add_player(Player(0,0,'1'))
-    board.game_board[0][1].add_player(Player(0,1,'2'))
-    assert board.is_valid_direction('1', 'R') is None
-    assert board.is_valid_direction('1', 'D') is True
-    assert board.is_valid_direction('2', 'L') is None
-    assert board.is_valid_direction('2', 'U') is None
-    assert board.is_valid_direction('2', 'R') is True
+def test_general_movement():
+    board = Board(5, 0, 1, 1)
+    player = Player((2, 2), "1")
+    board.players.append(player)
+    board.game_board[2][2].add_player(player)
+    board.move_player_on_board("1", "U")
+    assert board.find_player_by_name("1").get_coordinates() == (1, 2)
+    assert board.game_board[2][2].get_player() is None
+    board.move_player_on_board("1", "L")
+    assert board.find_player_by_name("1").get_coordinates() == (1, 1)
+    assert board.game_board[1][2].get_player() is None
+    board.move_player_on_board("1", "R")
+    assert board.find_player_by_name("1").get_coordinates() == (1, 2)
+    assert board.game_board[1][1].get_player() is None
+    board.move_player_on_board("1", "D")
+    assert board.find_player_by_name("1").get_coordinates() == (2, 2)
+    assert board.game_board[1][2].get_player() is None
 
 
-def test_get_new_coordinates():
-    board = Board(10, 1, 1, 5)
-    board.game_board[5][5].add_player(Player(5, 5, '1'))
-    assert board.get_new_coordinates('1', 'U') == (4,5)
-    assert board.get_new_coordinates('1', 'D') == (6, 5)
-    assert board.get_new_coordinates('1', 'L') == (5, 4)
-    assert board.get_new_coordinates('1', 'R') == (5, 6)
+def test_colliding_into_wall():
+    board = Board(2, 1, 1, 1)
+    player = Player((0, 0), "1")
+    board.players.append(player)
+    board.game_board[0][0].add_player(player)
+    assert board.is_valid_movement("1", "U") is False
+    assert board.is_valid_movement("1", "L") is False
+    board.move_player_on_board("1", "D")
+    board.move_player_on_board("1", "R")
+    assert board.is_valid_movement("1", "D") is False
+    assert board.is_valid_movement("1", "R") is False
 
 
-def test_update_player_position():
-    board = Board(10, 1, 1, 5)
-    player = Player(5, 5, '1')
-    board.game_board[5][5].player = player
-    board.move_player('1', 'U')
-    assert player.get_coordinates() == (4,5)
-    board.move_player('1', 'D')
-    assert player.get_coordinates() == (5, 5)
-    board.move_player('1', 'L')
-    assert player.get_coordinates() == (5, 4)
-    board.move_player('1', 'R')
-    assert player.get_coordinates() == (5, 5)
+def test_colliding_into_player():
+    board = Board(5, 1, 1, 1)
+    player_1 = Player((0, 0), "1")
+    board.players.append(player_1)
+    board.game_board[0][0].add_player(player_1)
+    player_2 = Player((0, 1), "2")
+    board.players.append(player_2)
+    board.game_board[0][1].add_player(player_2)
+    assert board.is_valid_movement("1", "R") is False
+    assert board.is_valid_movement("2", "L") is False
+    board.move_player_on_board("1", "D")
+    board.move_player_on_board("1", "R")
+    assert board.is_valid_movement("1", "U") is False
+    assert board.is_valid_movement("2", "D") is False
 
 
 def test_collect_treasure():
     board = Board(10, 1, 1, 3)
-    player = Player(0, 0, '1')
-    board.game_board[0][0].player = player
+    player = Player((0,0), "1")
+    board.players.append(player)
+    board.game_board[0][0].add_player(player)
     board.game_board[0][1].add_treasure(Treasure(1))
-    board.move_player('1', 'R')
+    board.move_player_on_board('1', 'R')
     assert player.get_score() == 1
-    board.move_player('1', 'R')
     assert board.game_board[0][1].get_treasure() is None
-    board.game_board[0][3].add_treasure(Treasure(2))
-    board.game_board[1][3].add_treasure(Treasure(3))
-    board.move_player('1', 'R')
-    board.move_player('1', 'D')
+    board.game_board[0][2].add_treasure(Treasure(2))
+    board.move_player_on_board('1', 'R')
+    assert player.get_score() == 3
+    board.game_board[0][3].add_treasure(Treasure(3))
+    board.move_player_on_board('1', 'R')
     assert player.get_score() == 6
+
 
 
 

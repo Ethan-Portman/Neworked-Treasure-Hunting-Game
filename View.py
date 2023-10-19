@@ -1,7 +1,7 @@
 from Board import Board
 
 
-def display(board: Board):
+def display(board: Board) -> str:
     """
     Prints the String representation of the game_board to the console
     :param board: The Board object

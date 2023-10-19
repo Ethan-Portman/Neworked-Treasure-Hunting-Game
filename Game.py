@@ -7,7 +7,7 @@ import View
 # Game Variables
 PLAYER_ONE_NAME = "1"
 PLAYER_TWO_NAME = "2"
-BOARD_LENGTH = 5
+BOARD_LENGTH = 10
 NUM_TREASURES = 10
 MIN_TREASURE = 1
 MAX_TREASURE = 5
@@ -83,6 +83,8 @@ class Game:
             with client_socket:
                 command_byte = client_socket.recv(1)
                 player, command = self.parse_command_byte(command_byte)
+                if command == "ERROR":
+                    client_socket.close()
                 self.execute_command(player, command, client_socket)
         self.end_game()
 

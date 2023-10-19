@@ -4,6 +4,8 @@ from Game import Game
 """
 COMMANDS
 Get Board: echo -n 'F0' | xxd -r -p | nc 127.0.0.1 12345
+echo -n 'F0' | xxd -r -p | nc 10.21.75.15 12345 | xxd
+
 Quit Game: echo -n '00' | xxd -r -p | nc 127.0.0.1 12345
 
 Player 1:

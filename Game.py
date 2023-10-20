@@ -52,8 +52,8 @@ class Game:
             0b10: PLAYER_TWO_NAME
         }
 
-        player_bits = (int.from_bytes(byte, byteorder='big') >> 2) & 0b00000011
-        return player_map.get(player_bits, "ERROR")
+        player_from_bits = (int.from_bytes(byte, byteorder='big') >> 2) & 0b00000011
+        return player_map.get(player_from_bits, "ERROR")
 
     @staticmethod
     def get_command_from_byte(byte: bytes) -> str:
@@ -70,32 +70,29 @@ class Game:
             0b0000: 'Q',
             0b1111: 'G'
         }
-        command_bits = (int.from_bytes(byte, byteorder='big') & 0xF0) >> 4
-        return command_map.get(command_bits, "ERROR")
+        command_from_bits = (int.from_bytes(byte, byteorder='big') & 0xF0) >> 4
+        return command_map.get(command_from_bits, "ERROR")
 
     def start(self) -> None:
         """
         Initiates and manages a game loop, continually accepting player commands over a network,
         executing these commands, and progressing the game until all treasures are collected.
         """
-        while self.game_board.num_treasures > 0:
-            client_socket = self.establish_client_connection()
-            with client_socket:
-                command_byte = client_socket.recv(1)
+        while True:
+            client = self.establish_client_connection()
+            with client:
+                command_byte = client.recv(1)
                 player, command = self.parse_command_byte(command_byte)
-                if command == "ERROR":
-                    client_socket.close()
-                self.execute_command(player, command, client_socket)
-        self.end_game()
+                self.execute_command(player, command, client)
 
     def establish_client_connection(self) -> socket:
         """
         Establishes a network connection with the client for receiving bytes.
         :return: The Client Socket used for accepting command bytes.
         """
-        client_socket, client_address = self.sock.accept()
+        client, client_address = self.sock.accept()
         print(f'Client {client_address[0]}: {client_address[1]}')
-        return client_socket
+        return client
 
     def parse_command_byte(self, byte: bytes) -> tuple[str, str]:
         """
@@ -119,19 +116,18 @@ class Game:
             self.game_board.move_player_on_board(player, command)
             self.send_encoded_scores(sock)
         elif command == 'G':
+            self.send_encoded_scores(sock)
             self.send_encoded_board(sock)
         elif command == 'Q':
             self.send_encoded_game_results(sock)
             self.end_game()
         elif command == 'ERROR':
             sock.sendall(b"Error in command. Terminating Connection.")
-            self.game_board.quit_application()
+            sock.close()
 
     def send_encoded_scores(self, sock: socket) -> None:
-        encoded_score_1 = struct.pack('!H', self.game_board.find_player_by_name(PLAYER_ONE_NAME).get_score())
-        encoded_score_2 = struct.pack('!H', self.game_board.find_player_by_name(PLAYER_TWO_NAME).get_score())
-        sock.sendall(encoded_score_1)
-        sock.sendall(encoded_score_2)
+        sock.sendall(struct.pack('!H', self.game_board.find_player_by_name(PLAYER_ONE_NAME).get_score()))
+        sock.sendall(struct.pack('!H', self.game_board.find_player_by_name(PLAYER_TWO_NAME).get_score()))
 
     def send_encoded_board(self, sock: socket) -> None:
         sock.sendall(View.display(self.game_board).encode())

@@ -89,9 +89,9 @@ class Board:
         :param direction: The direction that the player will move
         """
         if self.is_valid_movement(player_name, direction):
-            destination_tile = self.get_tile_after_player_move(player_name, direction)
-            self.move_player_to_tile(player_name, destination_tile)
-            self.collect_treasure_from_tile(player_name, destination_tile)
+            dst_tile = self.get_tile_after_player_move(player_name, direction)
+            self.move_player_to_tile(player_name, dst_tile)
+            self.collect_treasure_from_tile(player_name, dst_tile)
 
     def is_valid_movement(self, player_name: str, direction: str) -> bool:
         """

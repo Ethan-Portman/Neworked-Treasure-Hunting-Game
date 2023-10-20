@@ -132,6 +132,7 @@ def remove_blanks(lst: [str]) -> [str]:
     return new_lst
 
 
+""" ORIGINAL TEST - DOES NOT WORK """
 def parse_board(board_str: str) -> [[str]]:
     print(board_str)
     nl_pat = compile(r'\n+')
@@ -222,7 +223,7 @@ def stroll_along(score1: int, score2: int, dir1: str, dir2: str, dir3: str) -> N
     assert score2 == new_score2
 
 
-@pytest.mark.parametrize('execution_number', range(1))
+@pytest.mark.parametrize('execution_number', range(10))
 def test_board(execution_number):
     board, score1, score2 = get_board()
     n = len(board)

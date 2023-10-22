@@ -26,18 +26,3 @@ g.start()
 
 
 
-def parse_board(board_str: str) -> [[str]]:
-    print("PARSING BOARD INPUT")
-    print(board_str)
-    rows = board_str.split('\n')
-    # Remove any empty rows at the end
-    while rows and not rows[-1]:
-        rows.pop()
-    board = []
-    for row in rows:
-        cells = list(row)
-        board.append(cells)
-    # print("PARSING BOARD OUTPUT")
-    # print(board)
-    # print("DONE")
-    return board

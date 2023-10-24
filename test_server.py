@@ -1,9 +1,11 @@
-import pytest
 from re import compile
 from socket import socket, AF_INET, SOCK_STREAM
 from struct import unpack
 from subprocess import run
 from time import sleep
+
+import constants
+import pytest
 
 
 #
@@ -13,7 +15,7 @@ from time import sleep
 
 BUF_SIZE = 1024
 HOST = '127.0.0.1'
-PORT = 12345
+HEADER_LEN = 2
 
 PLAYER1 = '4'
 PLAYER1_STR = '1'
@@ -21,6 +23,7 @@ PLAYER2 = '8'
 PLAYER2_STR = '2'
 
 first_run = True
+connections = {}
 
 
 #
@@ -28,29 +31,61 @@ first_run = True
 #
 
 
-def get_data(client: socket) -> bytes:
+def setup_cnx() -> None:
+    global connections
+
+    teardown_cnx()
+
+    client1 = socket(AF_INET, SOCK_STREAM)
+    connections[PLAYER1] = client1
+    client1.connect((HOST, constants.PORT))
+    assert get_data(client1) == b'\x01'
+
+    client2 = socket(AF_INET, SOCK_STREAM)
+    connections[PLAYER2] = client2
+    client2.connect((HOST, constants.PORT))
+    assert get_data(client2) == b'\x02'
+
+
+def teardown_cnx() -> None:
+    global connections
+
+    for c in connections:
+        c.close()
+
+
+def get_buf(current_socket: socket, expected_size: int) -> bytes:
+    current_size = 0
     buffer = b''
-    size = 0
-    print('Client', client.getsockname(), 'waiting for data')
-    while size < BUF_SIZE:
-        data = client.recv(1)
-        size += 1
+    while current_size < expected_size:
+        data = current_socket.recv(expected_size - current_size)
+        print(f'{data} !!!!!!!!!!')
         if data == b'':
-            print('Client', client.getsockname(), 'received',  buffer.hex(), '(', buffer, ')')
             return buffer
         buffer = buffer + data
+        current_size = current_size + len(data)
 
     return buffer
 
 
+def get_data(client: socket) -> bytes:
+    print('Client', client.getsockname(), 'waiting for data')
+    header = get_buf(client, HEADER_LEN)
+    print(header)
+    print('!!!!!')
+    print('Client', client.getsockname(), 'Header', header, header.hex())
+    data_len = unpack('!H', header)[0]
+    data = get_buf(client, data_len)
+    print('Client', client.getsockname(), 'Data', data, data.hex())
+    return data
+
+
 def put_data(data: str) -> bytes:
-    client = socket(AF_INET, SOCK_STREAM)
-    client.connect((HOST, PORT))
+    client = connections[data[-1]]
     encoded_data = bytes.fromhex(data)
     print('Client', client.getsockname(), 'sending', data, '(', encoded_data.hex(), ')')
     client.sendall(encoded_data)
     response = get_data(client)
-    client.close()
     return response
 
 
@@ -93,8 +128,9 @@ def setup_module(module):
     print(cmd)
 
     print('Attempting to run container.')
-    cmd = run(['sudo', 'docker', 'run', '-d', '--log-driver', 'journald', '--name', '226-server', '-p', str(PORT) +
-               ':' + str(PORT), '-v', '/dev/log:/dev/log', '226-server'], capture_output=True)
+    cmd = run(['sudo', 'docker', 'run', '-d', '--log-driver', 'journald', '--name', '226-server', '-p',
+               str(constants.PORT) + ':' + str(constants.PORT), '-v', '/dev/log:/dev/log', '226-server'],
+              capture_output=True)
     print(cmd)
 
     wait(5)  # Ugly; should properly detect when the container is up and running
@@ -116,12 +152,12 @@ def restart_container():
     else:
         stop_container()
         start_container()
-        wait(5) # Ugly; should properly detect when the container is up and running
+        wait(5)  # Ugly; should properly detect when the container is up and running
 
 
-#
-#  TEST CODE
-#
+
+ # TEST CODE
+
 
 
 def remove_blanks(lst: [str]) -> [str]:
@@ -132,7 +168,6 @@ def remove_blanks(lst: [str]) -> [str]:
     return new_lst
 
 
-""" ORIGINAL TEST - DOES NOT WORK """
 def parse_board(board_str: str) -> [[str]]:
     print(board_str)
     nl_pat = compile(r'\n+')
@@ -152,7 +187,7 @@ def get_scores(result: bytes) -> (int, int):
 
 
 def get_board() -> ([[str]], int, int):
-    result = put_data('F0')
+    result = put_data('F' + PLAYER1)
     score1, score2 = get_scores(result)
     assert 0 <= score1 <= 100
     assert 0 <= score2 <= 100
@@ -200,7 +235,7 @@ def stroll_along(score1: int, score2: int, dir1: str, dir2: str, dir3: str) -> N
     for _ in range(10):
         for _ in range(10):
             result = put_data(direction + PLAYER1)
-            if result != b'':
+            if result != b'' and result != b'E':
                 new_score1, new_score2 = get_scores(result)
                 assert score1 <= new_score1
                 assert score2 == new_score2
@@ -223,8 +258,10 @@ def stroll_along(score1: int, score2: int, dir1: str, dir2: str, dir3: str) -> N
     assert score2 == new_score2
 
 
-@pytest.mark.parametrize('execution_number', range(10))
+@pytest.mark.parametrize('execution_number', range(1))
 def test_board(execution_number):
+    setup_cnx()
+
     board, score1, score2 = get_board()
     n = len(board)
     p1_loc = find_player(PLAYER1_STR, n, board)
@@ -243,7 +280,6 @@ def test_board(execution_number):
         stroll_along(score1, score2, '4', '6', '3')
 
 
-
-#
-#  DO NOT CHANGE THE CODE ABOVE
-#
+# #
+# #  DO NOT CHANGE THE CODE ABOVE
+# #

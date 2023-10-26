@@ -1,12 +1,14 @@
 from Player import Player
 from Treasure import Treasure
 
+TILE_DESCRIPTION = "."
+
 
 class Tile:
     """
     The Tile class represents a tile on the game board. A tile can contain a player or a treasure.
     """
-    def __init__(self, y_pos, x_pos, description="."):
+    def __init__(self, y_pos, x_pos, description=TILE_DESCRIPTION):
         if len(description) < 1:
             raise ValueError("Tile description must have at least one character")
         if y_pos < 0 or x_pos < 0:

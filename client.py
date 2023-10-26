@@ -1,8 +1,12 @@
 #!/usr/bin/python3.11
 from socket import socket, AF_INET, SOCK_STREAM
-from sys import argv
-from struct import pack, unpack
+from struct import unpack
 import constants
+"""
+This Python script establishes a network connection to the game server (Game.py) and interacts 
+with it using TCP sockets. It defines functions to allow the player to play the game by sending
+commands and receiving results from the server. 
+"""
 
 
 def connect_to_server() -> socket:
@@ -37,20 +41,9 @@ def get_packet_from_server(client: socket) -> bytes:
     :param client: The socket for communication with the server.
     :return: The received packet as bytes.
     """
-    header_size = 2
-    packet_length, = unpack('!H', get_bytes_from_server(client, header_size))
+    packet_length = unpack('!H', get_bytes_from_server(client, constants.HEADER_LENGTH))[0]
     packet = get_bytes_from_server(client, packet_length)
     return packet
-
-
-def receive_scores_from_server(client: socket) -> None:
-    """
-    Receives and displays player scores sent by the server.
-    :param client: The socket for communication with the server.
-    """
-    scores_packet = get_packet_from_server(client)
-    score_1, score_2 = unpack('!HH', scores_packet)
-    print(f'Player 1: {score_1}, Player 2: {score_2}')
 
 
 def receive_board_from_server(client: socket) -> None:
@@ -76,15 +69,26 @@ def receive_results_from_server(client: socket) -> None:
 
 
 def enter_game(curr_sock: socket) -> None:
-    response_length, = unpack('!H', get_bytes_from_server(curr_sock, 2))
+    """
+    Handles the entry of a player into the game by processing the server's response.
+    :param curr_sock: The socket for communication with the server.
+    """
+    response_length = unpack('!H', get_bytes_from_server(curr_sock, constants.HEADER_LENGTH))[0]
     if response_length == 0:
         print("Error, the game is full.")
     else:
-        player_id, = unpack('!B', get_bytes_from_server(curr_sock, response_length))
+        player_id = unpack('!B', get_bytes_from_server(curr_sock, response_length))[0]
         play_game(player_id, curr_sock)
 
 
 def play_game(player_id: int, curr_sock: socket) -> None:
+    """
+    Manages the gameplay for a player, allowing them to send commands to the server
+    and receive game updates.
+    :param player_id: The unique id of the player.
+    :param curr_sock: The socket for communication with the server.
+    :return:
+    """
     print(f"Welcome, your id is {player_id}")
     command_map = {
         "U": 0x24 if player_id == 1 else 0x28,
@@ -95,7 +99,7 @@ def play_game(player_id: int, curr_sock: socket) -> None:
         "G": 0xF0
     }
     while True:
-        command = input("Enter a command, (Q)uit, (G)ame, (U)p, (L)eft, (R)ight, (D)own: ")
+        command = input("Enter a command, (Q)uit, (G)ame, (U)p, (L)eft, (R)ight, (D)own: ").upper()
         if command in command_map:
             curr_sock.sendall(bytes([command_map[command]]))
             if command == "Q":
@@ -105,17 +109,26 @@ def play_game(player_id: int, curr_sock: socket) -> None:
                 receive_board_from_server(curr_sock)
 
 
+"""--------------------- MAIN FUNCTION ---------------------"""
 
 
+def main():
+    """
+    Responsible for running the game client. It establishes a connection to the game server, and
+    allows a player to enter the game by calling the 'enter_game' function. Any exceptions that
+    occur during this process are caught and appropriate error messages are displayed.
+    """
+    try:
+        server_socket = connect_to_server()
+        enter_game(server_socket)
+    except ConnectionError:
+        print("Error: Could not Establish a connection to the game server.")
+    except TimeoutError:
+        print("Error: Connection to the game server timed out.")
+    except Exception as details:
+        print("Error: An unexpected error occured.")
+        print(details)
 
 
-
-server_socket = connect_to_server()
-enter_game(server_socket)
-
-
-
-
-
-
-
+if __name__ == "__main__":
+    main()

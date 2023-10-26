@@ -1,9 +1,12 @@
+TREASURE_DESCRIPTION = '$'
+
+
 class Treasure:
     """
     The Treasure class represents a valuable item in the game. It is how players collect points
-    and win. Treasures are located on tiles.
+    and win. Treasures are located on tiles. Treasures have a value and a description.
     """
-    def __init__(self, value: int, description: str = '$'):
+    def __init__(self, value: int, description: str = TREASURE_DESCRIPTION):
         if value < 1:
             raise ValueError("Treasure must have a value greater than 0.")
         if len(description) < 1:

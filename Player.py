@@ -4,6 +4,9 @@ class Player:
     treasure from the tiles.
     """
     def __init__(self, coordinates: tuple[int, int], name="unknown", score=0):
+        """
+        A player is initialized with a position on the board.
+        """
         if score < 0:
             raise ValueError("Player cannot have a negative score")
         if len(name) < 1:

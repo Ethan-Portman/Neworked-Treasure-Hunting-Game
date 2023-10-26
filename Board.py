@@ -1,5 +1,4 @@
 import random
-import sys
 
 from Tile import Tile
 from Player import Player
@@ -7,7 +6,15 @@ from Treasure import Treasure
 
 
 class Board:
+    """
+    The Board class represents the game board for a treasure-collecting game. It creates a game-board
+    of Tile objects and provides methods for players to move on the board and collect Treasure.
+    """
     def __init__(self, length: int, num_treasures: int, min_treasure: int, max_treasure: int):
+        """
+        Board is initialized as a 2D Array of Tile Objects. Treasures are randomly placed on the tiles
+        and the board starts out with 0 players.
+        """
         self.length = length
         self.num_treasures = num_treasures
         self.min_treasure = min_treasure
@@ -113,7 +120,7 @@ class Board:
                     return True
                 case 'Q':
                     self.get_results()
-                    self.quit_application()
+
                 case _:
                     raise ValueError("Invalid input")
         except ValueError as details:
@@ -163,20 +170,16 @@ class Board:
             self.num_treasures -= 1
 
     # --------------------------------------------- END THE GAME -------------------------------------------------------
-    @staticmethod
-    def quit_application() -> None:
-        """
-        Exits the program
-        """
-        print("Goodbye")
-        sys.exit()
-
     def get_results(self) -> str:
+        """
+        Generates a String Representation of the game results displaying who won the game.
+        :return: The String Representation of the game results.
+        """
         if len(self.players) == 0:
             return "Nobody was playing."
 
         top_score = max([p.get_score() for p in self.players])
-        winners = [p for p in self.players if p.get_score == top_score]
+        winners = [p for p in self.players if p.get_score() == top_score]
 
         results = "\n".join(f"{p.get_name()} final score: {p.get_score()}" for p in self.players)
         results += f"\n{winners[0].get_name()} wins!\n" if len(winners) == 1 else "\nTie game!\n"

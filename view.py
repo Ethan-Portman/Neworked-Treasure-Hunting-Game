@@ -3,8 +3,9 @@ from Board import Board
 
 def display(board: Board) -> str:
     """
-    Prints the String representation of the game_board to the console
+    Generates, prints, and returns the  String representation of the game-board.
     :param board: The Board object
+    :return: The String representation of the game-board.
     """
     output_str = ""
     for row in board.game_board:
@@ -13,7 +14,3 @@ def display(board: Board) -> str:
         output_str += '\n'
     print(output_str)
     return output_str
-
-
-
-

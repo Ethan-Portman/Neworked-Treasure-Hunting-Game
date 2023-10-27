@@ -59,7 +59,6 @@ def get_buf(current_socket: socket, expected_size: int) -> bytes:
     buffer = b''
     while current_size < expected_size:
         data = current_socket.recv(expected_size - current_size)
-        print(f'{data} !!!!!!!!!!')
         if data == b'':
             return buffer
         buffer = buffer + data
@@ -71,8 +70,6 @@ def get_buf(current_socket: socket, expected_size: int) -> bytes:
 def get_data(client: socket) -> bytes:
     print('Client', client.getsockname(), 'waiting for data')
     header = get_buf(client, HEADER_LEN)
-    print(header)
-    print('!!!!!')
     print('Client', client.getsockname(), 'Header', header, header.hex())
     data_len = unpack('!H', header)[0]
     data = get_buf(client, data_len)

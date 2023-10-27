@@ -1,4 +1,4 @@
-HOST = '127.0.0.1'
-PORT = 12348
-
+# Network Constants
+HOST = ''
+PORT = 12345
 HEADER_LENGTH = 2

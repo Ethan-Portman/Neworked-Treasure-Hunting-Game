@@ -1,4 +1,4 @@
 # Network Constants
-HOST = ''
+HOST = '0.0.0.0' # WHY DOES THIS HAVE TO BE THIS???????
 PORT = 12345
 HEADER_LENGTH = 2

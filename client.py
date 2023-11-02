@@ -1,5 +1,5 @@
 #!/usr/bin/python3.11
-from socket import socket, AF_INET, SOCK_STREAM
+from asyncio import open_connection, run
 from struct import unpack
 import constants
 """
@@ -12,20 +12,7 @@ It is split up into three parts.
 """
 
 
-"""------------------------ NETWORK FUNCTIONS -------------------------"""
-
-
-def connect_to_server() -> socket:
-    """
-    Creates a socket used for communication with the game server.
-    :return: A socket connected to the game server.
-    """
-    s = socket(AF_INET, SOCK_STREAM)
-    s.connect((constants.HOST, constants.PORT))
-    return s
-
-
-def get_bytes_from_server(client: socket, num_bytes: int) -> bytes:
+async def get_bytes_from_server(reader, num_bytes: int) -> bytes:
     """
     Gets a specified number of bytes from the server.
     :param client: The socket for communication with the game server.
@@ -34,14 +21,14 @@ def get_bytes_from_server(client: socket, num_bytes: int) -> bytes:
     """
     buffer = b''
     while len(buffer) < num_bytes:
-        data = client.recv(num_bytes - len(buffer))
+        data = await reader.readexactly(num_bytes - len(buffer))
         if data == b'':
             return buffer
         buffer += data
     return buffer
 
 
-def get_payload_from_server(client: socket) -> bytes:
+async def get_payload_from_server(reader) -> bytes:
     """
     Gets a payload of data from the server.
      - Packet = [header][payload]
@@ -49,51 +36,35 @@ def get_payload_from_server(client: socket) -> bytes:
     :param client: The socket for communication with the server.
     :return: The received packet as bytes.
     """
-    payload_length = unpack('!H', get_bytes_from_server(client, constants.HEADER_LENGTH))[0]
-    payload = get_bytes_from_server(client, payload_length)
+    header = await get_bytes_from_server(reader, constants.HEADER_LENGTH)
+    payload_length = unpack('!H', header)[0]
+    payload = await get_bytes_from_server(reader, payload_length)
     return payload
 
 
-def receive_board_from_server(client: socket) -> None:
+async def receive_board_from_server(reader) -> None:
     """
     Receives both scores and the game board sent by the server and displays result.
     :param client: The socket for communication with the server.
     """
-    board_payload = get_payload_from_server(client)
+    board_payload = await get_payload_from_server(reader)
     score_1, score_2 = unpack('!HH', board_payload[:4])
     board = board_payload[4:].decode()
     print(f'Player 1: {score_1}, Player 2: {score_2}')
     print(board)
 
 
-def receive_results_from_server(client: socket) -> None:
+async def receive_results_from_server(reader) -> None:
     """
     Receives and displays game results sent by the server.
-    :param client: The socket for communication with the server.
+    :param reader: The socket for communication with the server.
     """
-    results_payload = get_payload_from_server(client)
+    results_payload = await get_payload_from_server(reader)
     results = results_payload.decode()
     print(results)
 
 
-"""------------------------ GENERAL GAMEPLAY --------------------------"""
-
-
-def enter_game(curr_sock: socket) -> None:
-    """
-    Handles the entry into the game by processing the server's response.
-    Server will either accept the connection by replying with a 1 or deny by replying with a 0.
-    :param curr_sock: The socket for communication with the server.
-    """
-    response_length = unpack('!H', get_bytes_from_server(curr_sock, constants.HEADER_LENGTH))[0]
-    if response_length == 0:
-        print("Error, the game is full.")
-    else:
-        player_id = unpack('!B', get_bytes_from_server(curr_sock, response_length))[0]
-        play_game(player_id, curr_sock)
-
-
-def play_game(player_id: int, curr_sock: socket) -> None:
+async def play_game(player_id: int, reader, writer) -> None:
     """
     Manages the gameplay for a player, allowing them to send commands to the server
     and receive game updates.
@@ -114,34 +85,24 @@ def play_game(player_id: int, curr_sock: socket) -> None:
     while True:
         command = input("Enter a command, (Q)uit, (G)ame, (U)p, (L)eft, (R)ight, (D)own: ").upper()
         if command in available_commands:
-            curr_sock.sendall(bytes([available_commands[command]]))
+            writer.write(bytes([available_commands[command]]))
             if command == "Q":
-                receive_results_from_server(curr_sock)
+                await receive_results_from_server(reader)
                 break
             else:
-                receive_board_from_server(curr_sock)
+                await receive_board_from_server(reader)
 
 
-"""------------------------ MAIN FUNCTION -----------------------------"""
+async def main():
+    reader, writer = await open_connection(constants.HOST, constants.PORT)
+    initial_response_bytes = await reader.readexactly(constants.HEADER_LENGTH)
+    initial_response = unpack('!H', initial_response_bytes)[0]
 
+    if initial_response == 0:
+        print("Error, the game is full")
+    else:
+        player_id_bytes = await reader.readexactly(initial_response)
+        player_id = unpack('!B', player_id_bytes)[0]
+        await play_game(player_id, reader, writer)
 
-def main():
-    """
-    Responsible for running the game client. It first establishes a connection to the game server,
-    and then enters the game.
-    """
-    try:
-        server_socket = connect_to_server()
-        enter_game(server_socket)
-
-    except ConnectionError:
-        print("Error: Could not Establish a connection to the game server.")
-    except TimeoutError:
-        print("Error: Connection to the game server timed out.")
-    except Exception as details:
-        print("Error: An unexpected error occurred.")
-        print(details)
-
-
-if __name__ == "__main__":
-    main()
+run(main())

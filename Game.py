@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+
+from asyncio import run, start_server, StreamReader, StreamWriter
 from struct import pack
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from threading import Semaphore, Thread
@@ -34,20 +36,8 @@ class Game:
         self.game_board = Board(BOARD_LENGTH, NUM_TREASURES, MIN_TREASURE, MAX_TREASURE)
         self.game_board.add_player_to_game_board(PLAYER_ONE_NAME)
         self.game_board.add_player_to_game_board(PLAYER_TWO_NAME)
-        self.server = self.create_server_socket()
-        self.num_connections = 0
 
-    @staticmethod
-    def create_server_socket() -> socket:
-        """
-        Creates and configures a TCP Socket to be used as the game server.
-        :return: The Server Socket
-        """
-        s = socket(AF_INET, SOCK_STREAM)
-        s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        s.bind((constants.HOST, constants.PORT))
-        s.listen(MAX_PLAYERS)
-        return s
+        self.num_connections = 0
 
     """------------------- RECEIVING DATA FROM CLIENT -------------------"""
 
@@ -94,111 +84,63 @@ class Game:
         command = self.get_command_from_byte(byte)          # C = Command Bit
         return player, command                              # P =  Player Bit
 
-    """--------------------- SENDING DATA TO CLIENT ---------------------"""
-
-    def send_scores_to_client(self, client: socket) -> None:
-        """
-        Server ----> packet([length][score1 score2]) ----> Client
-        :param client: The client connected to the game server.
-        """
-        player_1_score = self.game_board.find_player_by_name(PLAYER_ONE_NAME).get_score()
-        player_2_score = self.game_board.find_player_by_name(PLAYER_TWO_NAME).get_score()
-
-        packet = pack('!HH', player_1_score, player_2_score)
-        packet_header = pack('!H', len(packet))
-        client.sendall(packet_header + packet)
-
-    def send_board_to_client(self, client: socket) -> None:
-        """
-        Server ----> packet([length][score1 score2 board]) ----> Client
-        :param client: The client connected to the game server.
-        """
+    async def send_board_to_client(self, writer: StreamWriter) -> None:
         board = view.display(self.game_board)
         player_1_score = self.game_board.find_player_by_name(PLAYER_ONE_NAME).get_score()
         player_2_score = self.game_board.find_player_by_name(PLAYER_TWO_NAME).get_score()
 
         packet = pack('!HH', player_1_score, player_2_score) + board.encode()
         packet_header = pack('!H', len(packet))
-        client.sendall(packet_header + packet)
+        writer.write(packet_header + packet)
+        await writer.drain()
 
-    def send_results_to_client(self, client: socket) -> None:
-        """
-        Server ----> packet([length][results]) ----> Client
-        :param client: The client socket connected to the game server.
-        """
+    async def send_results_to_client(self, writer: StreamWriter) -> None:
         results = self.game_board.get_results()
 
         packet = results.encode()
         packet_header = pack('!H', len(packet))
-        client.sendall(packet_header + packet)
+        writer.write(packet_header + packet)
+        await writer.drain()
 
-    """------------------------ HANDLING THREADS ------------------------"""
-
-    def execute_client_command(self, client: socket, player: str, command: str) -> None:
-        """
-        Executes a clients command, updates the game state, and sends the results to the client.
-        :param client: The client socket for communication.
-        :param player: The player associated with the command.
-        :param command: The command to be executed.
-        """
-        global COMMAND_LOCK
+    async def execute_client_command(self, reader: StreamReader, writer: StreamWriter, player: str, command: str) -> None:
         if command in ['U', 'L', 'D', 'R']:
-            with COMMAND_LOCK:
-                self.game_board.move_player_on_board(player, command)
-            self.send_board_to_client(client)
+            self.game_board.move_player_on_board(player, command)
+            await self.send_board_to_client(writer)
         elif command == 'G':
-            self.send_board_to_client(client)
+            await self.send_board_to_client(writer)
         elif command == 'ERROR':
-            client.sendall(b"Error in command. Terminating Connection.")
-            client.close()
+            writer.write(b"Error in Command. Terminating Connection.")
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
 
-    def handle_client_thread(self, client: socket, client_id: int):
-        """
-        Handles communication and gameplay for a connected player.
-        :param client: The client socket connected to the game server.
-        :param client_id: The unique identifier for the player.
-        """
-        with client:
-            client.sendall(pack('!HB', 1, client_id))  # Send Client their ID
+    async def handle_client_coroutine(self, reader: StreamReader, writer: StreamWriter):
+        print("Start")
+        self.num_connections += 1
+        client_id = self.num_connections
+        writer.write(pack('!HB', 1, client_id))
+        await writer.drain()
 
-            while True:
-                player, command = self.parse_command_byte(client.recv(1))  # Get a byte from the client
-                print(f'Player: {player}, Command: {command}')
-                if command != 'Q':
-                    self.execute_client_command(client, player, command)  # Execute the byte from the client
-                else:
-                    self.send_results_to_client(client)
-                    self.num_connections -= 1
-                    break
+        while True:
+            client_byte = await reader.readexactly(1)
+            player, command = self.parse_command_byte(client_byte)
+            if command != 'Q':
+                await self.execute_client_command(reader, writer, player, command)  # Execute the byte from the client
+            else:
+                await self.send_results_to_client(writer)
+                self.num_connections -= 1
+                break
 
     """-------------------------- GAME DRIVER ---------------------------"""
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """
         Starts the game server by accepting client connections and creating threads for each player
         connection. Game server accepts two concurrent connection and will send a packet containing 0
         if the game server is full.
         """
-        while self.num_connections < MAX_PLAYERS:
-            try:
-                client, client_address = self.server.accept()
-                print(f'Connected to client {client_address[0]}:{client_address[1]}')
-                self.num_connections += 1
-                Thread(target=self.handle_client_thread, args=(client, self.num_connections)).start()
+        server = await start_server(self.handle_client_coroutine, constants.HOST, constants.PORT)
+        await server.serve_forever()
 
-            except ConnectionError:
-                print("Error: Could not Establish a connection to the client.")
-            except TimeoutError:
-                print("Error: Connection to the client timed out.")
-            except Exception as details:
-                print("Error: An unexpected error occurred.")
-                print(details)
 
-        while True:  # If server is full, reject additional connections.
-            try:
-                client, client_address = self.server.accept()
-                client.sendall(pack('!H', 0))
-                client.close()
-                print(f"{client_address[0]}:{client_address[1]} attempted to connect but was denied entry.")
-            except Exception:
-                continue
+

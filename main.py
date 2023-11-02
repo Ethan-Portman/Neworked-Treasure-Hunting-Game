@@ -1,5 +1,17 @@
 #!/usr/bin/python3
 from Game import Game
+import asyncio
+
 
 g = Game()
-g.start()
+asyncio.run(g.start())
+
+
+
+
+
+"""
+ECHO "..." | XXD -R -P | NC LOCALHOST 12345
+^^ This will be on the exam
+"""
+

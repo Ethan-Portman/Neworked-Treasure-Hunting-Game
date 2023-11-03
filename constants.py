@@ -1,5 +1,5 @@
 # Network Constants
-HOST = '0.0.0.0'
+HOST = ''
 PORT = 12345
 HEADER_LENGTH = 2
 

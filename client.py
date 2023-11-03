@@ -112,7 +112,7 @@ async def main():
     client id it joins the game by entering the play_game function. All errors are caught and displayed.
     """
     try:
-        reader, writer = await open_connection(constants.HOST, constants.PORT)
+        reader, writer = await open_connection('127.0.0.1', constants.PORT)
         initial_response_bytes = await reader.readexactly(constants.HEADER_LENGTH)
         initial_response = unpack('!H', initial_response_bytes)[0]
 

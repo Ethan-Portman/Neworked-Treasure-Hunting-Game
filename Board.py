@@ -1,9 +1,8 @@
+import constants
 import random
-
 from Tile import Tile
 from Player import Player
 from Treasure import Treasure
-
 
 class Board:
     """
@@ -13,7 +12,7 @@ class Board:
     def __init__(self, length: int, num_treasures: int, min_treasure: int, max_treasure: int):
         """
         Board is initialized as a 2D Array of Tile Objects. Treasures are randomly placed on the tiles
-        and the board starts out with 0 players.
+        and the board starts out with 0 players. Boatd is validated via the validate_board method.
         """
         self.length = length
         self.num_treasures = num_treasures
@@ -24,10 +23,13 @@ class Board:
         self.populate_board_with_treasure()
         self.players = []
 
-    def validate_board(self):
+    def validate_board(self) -> None:
         """
         Validates the initial parameters for the game_board, ensuring they meet Requirements.
-        Throws a ValueError if requirements are not met.
+        :raises ValueError: If The length of the board is less than 2 or greater than 50.
+                            If The number of treasures is less than 0 or more than can fit on the board.
+                            If the min_treasure is less than 1 or greater than 100
+                            If the max_treasure is less than min_treasure or greater than 1000.
         """
         if self.length < 2 or self.length > 50:
             raise ValueError("Length of board must be between 2 and 50")
@@ -58,7 +60,7 @@ class Board:
     def find_empty_tile(self) -> Tile:
         """
         Retrieves a Tile that is free of both treasure and player
-        :return: The Tile Object
+        :return: The Tile Object free of treasure and player.
         """
         while True:
             y_pos, x_pos = random.randint(0, self.length - 1), random.randint(0, self.length - 1)
@@ -79,9 +81,10 @@ class Board:
 
     def find_player_by_name(self, player_name: str) -> Player:
         """
-        Fetches a player on the board
-        :param player_name: The name of the player to be fetched
-        :return: The Player Object
+        Fetches a player on the board.
+        :param player_name: The name of the player to be fetched.
+        :return: The Player Object matching the player name.
+        :raises ValueError: If the player with the matching name is not on the board.
         """
         for player in self.players:
             if player.name == player_name:
@@ -91,7 +94,7 @@ class Board:
     # ---------------------------------- MOVEMENT & COLLECTING TREASURE ------------------------------------------------
     def move_player_on_board(self, player_name: str, direction: str) -> None:
         """
-        Moves a player to a new Tile and collects Treasure
+        Moves a player to a new Tile and collect Treasure.
         :param player_name: Name of the player to be moved
         :param direction: The direction that the player will move
         """
@@ -102,25 +105,27 @@ class Board:
 
     def is_valid_movement(self, player_name: str, direction: str) -> bool:
         """
-        Validates whether the direction for the player is executable
-        :param player_name: The player to be moved
-        :param direction: The direction the player is trying to move
-        :return: If the direction is valid or not
+        Validates whether the given movement direction is executable for the specified player. The method checks
+        if the player can move in the specified direction without colliding into other players or going out of bounds
+        on the game-board.
+        :param player_name: The name of the player to be moved.
+        :param direction: The direction the player is trying to move.
+        :raises ValueError: Catches Error If the direction is not valid and returns false.
+        :return: True if the direction is valid and executable, False otherwise.
         """
         curr_y, curr_x = self.find_player_by_name(player_name).get_coordinates()
         try:
             match direction:
-                case 'U' if curr_y > 0 and self.game_board[curr_y - 1][curr_x].get_player() is None:
+                case constants.UP if curr_y > 0 and self.game_board[curr_y - 1][curr_x].get_player() is None:
                     return True
-                case 'D' if curr_y < self.length - 1 and self.game_board[curr_y + 1][curr_x].player is None:
+                case constants.DOWN if curr_y < self.length - 1 and self.game_board[curr_y + 1][curr_x].player is None:
                     return True
-                case 'L' if curr_x > 0 and self.game_board[curr_y][curr_x - 1].player is None:
+                case constants.LEFT if curr_x > 0 and self.game_board[curr_y][curr_x - 1].player is None:
                     return True
-                case 'R' if curr_x < self.length - 1 and self.game_board[curr_y][curr_x + 1].player is None:
+                case constants.RIGHT if curr_x < self.length - 1 and self.game_board[curr_y][curr_x + 1].player is None:
                     return True
-                case 'Q':
+                case constants.QUIT:
                     self.get_results()
-
                 case _:
                     raise ValueError("Invalid input")
         except ValueError as details:
@@ -129,24 +134,25 @@ class Board:
 
     def get_tile_after_player_move(self, player_name: str, direction: str) -> Tile:
         """
-        Retrieves the tile that the player will move to.
-        :param player_name: The name of the player to be moved
-        :param direction: The direction of movement
-        :return: The Tile Object
+        Retrieves the tile that the player will move to after the specified direction. Player and movement is checked
+        for validity in is_valid_movement so direction is always valid.
+        :param player_name: The name of the player to be moved.
+        :param direction: The direction of movement.
+        :return: The Tile Object that the player will move to.
         """
         y_pos, x_pos = self.find_player_by_name(player_name).get_coordinates()
         match direction:
-            case 'U': y_pos -= 1
-            case 'D': y_pos += 1
-            case 'L': x_pos -= 1
-            case 'R': x_pos += 1
+            case constants.UP: y_pos -= 1
+            case constants.DOWN: y_pos += 1
+            case constants.LEFT: x_pos -= 1
+            case constants.RIGHT: x_pos += 1
         return self.game_board[y_pos][x_pos]
 
     def move_player_to_tile(self, player_name: str, tile: Tile) -> None:
         """
-        Moves a player onto a different tile
-        :param player_name: The name of the player to be moved
-        :param tile: The Tile the player will be moved to
+        Moves a specified player onto a specified tile.
+        :param player_name: The name of the player to be moved.
+        :param tile: The Tile the player will be moved to.
         """
         player = self.find_player_by_name(player_name)
         old_y, old_x = player.get_coordinates()
@@ -157,7 +163,8 @@ class Board:
 
     def collect_treasure_from_tile(self, player_name: str, tile: Tile) -> None:
         """
-        Searches tile for treasure and adds the treasure's value to the players score. It then removes the treasure.
+        Searches tile for treasure and adds the treasure's value to the players score, if present.
+        If treasure was collected method proceeds to remove the treasure.
         :param player_name: The name of the player searching for treasure
         :param tile: The Tile that is being searched
         """
@@ -173,6 +180,7 @@ class Board:
     def get_results(self) -> str:
         """
         Generates a String Representation of the game results displaying who won the game.
+        Prints the results to the console.
         :return: The String Representation of the game results.
         """
         if len(self.players) == 0:

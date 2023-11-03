@@ -1,4 +1,25 @@
 # Network Constants
-HOST = '0.0.0.0' # WHY DOES THIS HAVE TO BE THIS???????
+HOST = '0.0.0.0'
 PORT = 12345
 HEADER_LENGTH = 2
+
+# Game Constants
+TREASURE_DESCRIPTION = '$'
+TILE_DESCRIPTION = "."
+PLAYER_ONE_NAME = "1"
+PLAYER_TWO_NAME = "2"
+BOARD_LENGTH = 10
+NUM_TREASURES = 10
+MIN_TREASURE = 1
+MAX_TREASURE = 5
+MAX_PLAYERS = 2
+
+# Movement Constants
+UP = 'U'
+DOWN = 'D'
+LEFT = "L"
+RIGHT = "R"
+QUIT = "Q"
+GAME = "G"
+
+
